@@ -30,12 +30,15 @@
 
     // YOUR SUPABASE CREDENTIALS
     const SUPABASE_URL = "https://ngqcidwtbnotylrrnqwm.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_u7jNjlO1c7Z3AFvXzhwLMQ_LvLKjGip";
+    const SUPABASE_ANON_KEY = "PASTE_YOUR_PUBLISHABLE_KEY_HERE";
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function IntercomApp() {
-      const [role, setRole] = useState("Agent"); // "Agent" (Trainee) or "Customer" (Trainer)
+      const [role, setRole] = useState("Agent"); // "Agent" or "Customer"
+      const [customerName, setCustomerName] = useState("Tremaine Malden");
+      const [agentName, setAgentName] = useState("John Batomalaque");
+      
       const [activeTab, setActiveTab] = useState("Reply");
       const [messages, setMessages] = useState([]);
       const [inputText, setInputText] = useState("");
@@ -79,7 +82,7 @@
 
         const newMessage = {
           text: inputText,
-          sender: role === "Customer" ? "Tremaine Malden" : "Agent",
+          sender: role === "Customer" ? customerName : agentName,
           role: role === "Customer" ? "user" : "assistant",
           is_note: role === "Agent" && activeTab === "Note"
         };
@@ -91,22 +94,41 @@
       return (
         <div className="flex flex-col h-screen w-full bg-white text-xs select-none">
           
-          {/* TOP ROLE SWITCHER BAR */}
-          <div className="bg-slate-900 text-white px-4 py-2 flex justify-between items-center text-xs shrink-0">
-            <div className="flex items-center gap-2">
+          {/* TOP ROLE SWITCHER & NAME SETTINGS BAR */}
+          <div className="bg-slate-900 text-white px-4 py-2 flex flex-wrap gap-4 justify-between items-center text-xs shrink-0">
+            <div className="flex items-center gap-3">
               <span className="font-bold text-amber-400">⚡ LIVE TRAINING MODE</span>
-              <span className="text-gray-400">| Switch viewing role:</span>
+              <span className="text-gray-500">|</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-300">Customer:</span>
+                <input 
+                  type="text" 
+                  value={customerName} 
+                  onChange={(e) => setCustomerName(e.target.value)} 
+                  className="bg-gray-800 text-amber-300 border border-gray-700 px-2 py-0.5 rounded text-xs w-32 outline-none focus:border-amber-400"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-300">Agent:</span>
+                <input 
+                  type="text" 
+                  value={agentName} 
+                  onChange={(e) => setAgentName(e.target.value)} 
+                  className="bg-gray-800 text-blue-300 border border-gray-700 px-2 py-0.5 rounded text-xs w-32 outline-none focus:border-blue-400"
+                />
+              </div>
             </div>
+
             <div className="flex gap-2">
               <button 
                 onClick={() => setRole("Agent")} 
                 className={`px-3 py-1 rounded font-bold transition ${role === "Agent" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}>
-                🎧 View as Trainee (Agent UI)
+                🎧 View as Trainee ({agentName})
               </button>
               <button 
                 onClick={() => setRole("Customer")} 
                 className={`px-3 py-1 rounded font-bold transition ${role === "Customer" ? "bg-emerald-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}>
-                👤 View as Trainer (Customer)
+                👤 View as Trainer ({customerName})
               </button>
             </div>
           </div>
@@ -122,7 +144,9 @@
               </div>
               <div className="flex flex-col items-center gap-4">
                 <button className="p-2 hover:text-white"><i data-lucide="settings" className="w-4 h-4"></i></button>
-                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-semibold flex items-center justify-center text-[10px]">W</div>
+                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-semibold flex items-center justify-center text-[10px]">
+                  {agentName ? agentName[0].toUpperCase() : "A"}
+                </div>
               </div>
             </div>
 
@@ -155,7 +179,7 @@
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-1.5 font-semibold text-gray-900">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>Tremaine Malden</span>
+                    <span>{customerName}</span>
                   </div>
                   <span className="text-[10px] text-gray-400">Live</span>
                 </div>
@@ -168,8 +192,8 @@
             {/* 4. MAIN CHAT & COMPOSER AREA */}
             <div className="flex-1 bg-white flex flex-col min-w-0">
               <div className="h-12 px-4 border-b border-gray-200 flex justify-between items-center bg-white shrink-0">
-                <h2 className="font-bold text-sm text-gray-900">Tremaine Malden</h2>
-                <div className="text-[11px] text-gray-500">Current View: <b className="text-blue-600">{role} Mode</b></div>
+                <h2 className="font-bold text-sm text-gray-900">{customerName}</h2>
+                <div className="text-[11px] text-gray-500">Current View: <b className="text-blue-600">{role === "Agent" ? `${agentName} (Agent)` : `${customerName} (Customer)`}</b></div>
               </div>
 
               {/* Chat Thread */}
@@ -181,19 +205,21 @@
                   <div key={idx} className="space-y-1">
                     {m.is_note ? (
                       <div className="bg-amber-100 border border-amber-300 p-2.5 rounded-lg text-amber-900 text-xs max-w-[85%] mx-auto">
-                        <div className="font-bold text-[10px] text-amber-700">🔒 INTERNAL NOTE</div>
+                        <div className="font-bold text-[10px] text-amber-700">🔒 INTERNAL NOTE ({m.sender})</div>
                         <div>{m.text}</div>
                       </div>
                     ) : m.role === "assistant" ? (
                       <div className="max-w-[80%] bg-[#2563eb] text-white p-3 rounded-2xl rounded-tr-none ml-auto shadow-sm">
-                        <div className="text-[9px] text-blue-200 font-semibold mb-0.5">Agent</div>
+                        <div className="text-[9px] text-blue-200 font-semibold mb-0.5">{m.sender || agentName}</div>
                         <div>{m.text}</div>
                       </div>
                     ) : (
                       <div className="flex gap-2 max-w-[85%] items-start">
-                        <div className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-1">T</div>
+                        <div className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-1">
+                          {m.sender ? m.sender[0].toUpperCase() : "C"}
+                        </div>
                         <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-tl-none text-gray-800 shadow-sm">
-                          <div className="text-[9px] text-gray-400 font-semibold mb-0.5">Tremaine (Customer)</div>
+                          <div className="text-[9px] text-gray-400 font-semibold mb-0.5">{m.sender || customerName}</div>
                           <div>{m.text}</div>
                         </div>
                       </div>
@@ -220,12 +246,12 @@
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                    placeholder={role === "Customer" ? "Type as Customer (Trainer)..." : (activeTab === "Note" ? "Write private internal note..." : "Reply as Agent (Trainee)...")}
+                    placeholder={role === "Customer" ? `Type as ${customerName}...` : (activeTab === "Note" ? "Write private internal note..." : `Reply as ${agentName}...`)}
                     className="w-full text-xs outline-none resize-none min-h-[60px]"
                   />
                   <div className="flex justify-end pt-1 border-t border-gray-100">
                     <button onClick={sendMessage} className="bg-blue-600 text-white px-4 py-1.5 rounded font-medium hover:bg-blue-700">
-                      Send {role === "Customer" ? "(Customer)" : (activeTab === "Note" ? "(Note)" : "(Reply)")}
+                      Send {role === "Customer" ? `(${customerName})` : (activeTab === "Note" ? "(Note)" : `(${agentName})`)}
                     </button>
                   </div>
                 </div>
@@ -234,9 +260,12 @@
 
             {/* 5. RIGHT METADATA PANEL */}
             <div className="w-64 bg-[#fcfcfd] border-l border-gray-200 p-3 shrink-0 overflow-y-auto">
-              <div className="font-bold text-gray-800 mb-3">User Data</div>
+              <div className="font-bold text-gray-800 mb-2">Assignee</div>
+              <div className="text-xs text-gray-700 font-medium mb-4">{agentName}</div>
+
+              <div className="font-bold text-gray-800 mb-2">User Data</div>
               <div className="space-y-2 text-gray-600 text-xs">
-                <div><span className="text-gray-400">Name:</span> Tremaine Malden</div>
+                <div><span className="text-gray-400">Name:</span> {customerName}</div>
                 <div><span className="text-gray-400">Company:</span> ZEVO</div>
                 <div><span className="text-gray-400">Status:</span> Active Rental</div>
               </div>
