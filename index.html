@@ -32,7 +32,7 @@
     const SUPABASE_URL = "https://ngqcidwtbnotylrrnqwm.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_u7jNjlO1c7Z3AFvXzhwLMQ_LvLKjGip";
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function IntercomApp() {
       const [role, setRole] = useState("Agent"); 
