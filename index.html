@@ -45,12 +45,14 @@
       const [activeTab, setActiveTab] = useState("Reply");
       const [contactNotes, setContactNotes] = useState([]);
       const [noteInput, setNoteInput] = useState("");
+      const [ticketScripts, setTicketScripts] = useState([]);
       const chatEndRef = useRef(null);
 
       // Fetch initial data & subscribe globally
       useEffect(() => {
         fetchAllMessages();
         fetchAllContactNotes();
+        fetchAllTicketScripts();
 
         const channel = supabase
           .channel('global-realtime-channel')
@@ -68,6 +70,17 @@
             (payload) => {
               const newNote = payload.new;
               setContactNotes((prev) => [...prev, newNote]);
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'ticket_scripts' },
+            (payload) => {
+              if (payload.eventType === 'INSERT') {
+                setTicketScripts((prev) => [...prev, payload.new]);
+              } else if (payload.eventType === 'UPDATE') {
+                setTicketScripts((prev) => prev.map(s => s.id === payload.new.id ? payload.new : s));
+              }
             }
           )
           .subscribe();
@@ -98,6 +111,16 @@
         if (!error && data) setContactNotes(data);
         // If the contact_notes table doesn't exist yet, this silently no-ops;
         // the Notes panel will just show its empty state until the table is created.
+      };
+
+      const fetchAllTicketScripts = async () => {
+        const { data, error } = await supabase
+          .from('ticket_scripts')
+          .select('*')
+          .order('sequence', { ascending: true });
+        if (!error && data) setTicketScripts(data);
+        // If the ticket_scripts table doesn't exist yet, this silently no-ops;
+        // scripted tickets just behave like any regular manually-created chat.
       };
 
       // Extract unique conversations dynamically from all database messages
@@ -135,6 +158,7 @@
         if (!inputText.trim()) return;
 
         const activeCustName = currentActiveChat ? currentActiveChat.customerName : customerName;
+        const isAgentReply = role === "Agent" && activeTab !== "Note";
 
         const newMessage = {
           conversation_id: activeChatId,
@@ -147,6 +171,29 @@
 
         setInputText("");
         await supabase.from('messages').insert([newMessage]);
+
+        // If this conversation is a scripted real-ticket scenario, release the next
+        // real customer message from that ticket a couple seconds after the trainee replies.
+        if (isAgentReply) {
+          const chatIdAtSend = activeChatId;
+          const nextStep = ticketScripts
+            .filter(s => s.conversation_id === chatIdAtSend && !s.delivered)
+            .sort((a, b) => a.sequence - b.sequence)[0];
+
+          if (nextStep) {
+            setTimeout(async () => {
+              await supabase.from('messages').insert([{
+                conversation_id: chatIdAtSend,
+                customer_name: nextStep.customer_name,
+                text: nextStep.text,
+                sender: nextStep.customer_name,
+                role: "user",
+                is_note: false
+              }]);
+              await supabase.from('ticket_scripts').update({ delivered: true }).eq('id', nextStep.id);
+            }, 1800 + Math.random() * 1400);
+          }
+        }
       };
 
       const startNewGlobalChat = async () => {
