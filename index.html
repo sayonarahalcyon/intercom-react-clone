@@ -61,7 +61,7 @@
             { event: 'INSERT', schema: 'public', table: 'messages' },
             (payload) => {
               const newMsg = payload.new;
-              setMessages((prev) => [...prev, newMsg]);
+              setMessages((prev) => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
             }
           )
           .on(
@@ -69,7 +69,7 @@
             { event: 'INSERT', schema: 'public', table: 'contact_notes' },
             (payload) => {
               const newNote = payload.new;
-              setContactNotes((prev) => [...prev, newNote]);
+              setContactNotes((prev) => prev.some(n => n.id === newNote.id) ? prev : [...prev, newNote]);
             }
           )
           .on(
@@ -77,7 +77,7 @@
             { event: '*', schema: 'public', table: 'ticket_scripts' },
             (payload) => {
               if (payload.eventType === 'INSERT') {
-                setTicketScripts((prev) => [...prev, payload.new]);
+                setTicketScripts((prev) => prev.some(s => s.id === payload.new.id) ? prev : [...prev, payload.new]);
               } else if (payload.eventType === 'UPDATE') {
                 setTicketScripts((prev) => prev.map(s => s.id === payload.new.id ? payload.new : s));
               }
@@ -85,7 +85,17 @@
           )
           .subscribe();
 
+        // Safety net: even if the realtime push ever drops (flaky connection, a table not
+        // fully enabled for realtime, etc.), re-pull everything every few seconds so nothing
+        // ever requires a manual page refresh to show up.
+        const pollId = setInterval(() => {
+          fetchAllMessages();
+          fetchAllContactNotes();
+          fetchAllTicketScripts();
+        }, 4000);
+
         return () => {
+          clearInterval(pollId);
           supabase.removeChannel(channel);
         };
       }, []);
