@@ -344,6 +344,8 @@
 
       const initials = (name) => (name ? name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join("") : "?");
 
+      const formatTime = (ts) => ts ? new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : "";
+
       const avatarPalette = ["bg-amber-500","bg-rose-500","bg-violet-500","bg-sky-500","bg-teal-500","bg-fuchsia-500"];
       const avatarColor = (name) => {
         if (!name) return avatarPalette[0];
@@ -465,6 +467,12 @@
                 </div>
               </div>
 
+              <div className="flex border-b border-gray-200 text-[11px] font-semibold text-gray-500 bg-white">
+                <div className="px-3 py-2 border-b-2 border-blue-600 text-blue-600 cursor-pointer">Open <span className="text-gray-400 font-normal">{conversationList.length}</span></div>
+                <div className="px-3 py-2 cursor-pointer hover:text-gray-700">Closed</div>
+                <div className="px-3 py-2 cursor-pointer hover:text-gray-700">Snoozed</div>
+              </div>
+
               <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
                 {conversationList.map((chat) => (
                   <div
@@ -520,38 +528,49 @@
                   <div className="text-center text-gray-400 py-10">No messages in this chat yet. Type below to broadcast!</div>
                 )}
 
-                {activeMessages.map((m, idx) => (
-                  <div key={idx} className="space-y-1">
-                    {m.is_note ? (
-                      <div className="bg-[#fffbeb] border border-[#fde68a] p-3 rounded-lg text-[#92400e] text-xs max-w-[85%] mx-auto shadow-2xs">
-                        <div className="font-bold text-[10px] text-[#b45309] mb-0.5 flex items-center gap-1">
-                          <i data-lucide="lock" className="w-3 h-3"></i> INTERNAL NOTE ({m.sender})
-                        </div>
-                        <div>{m.text}</div>
-                      </div>
-                    ) : m.role === "assistant" ? (
-                      <div className="flex gap-2 max-w-[85%] items-start ml-auto flex-row-reverse">
-                        <div className={`w-6 h-6 rounded-full ${avatarColor(m.sender)} text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-1`}>
-                          {initials(m.sender)}
-                        </div>
-                        <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-tr-none text-gray-900 shadow-2xs leading-relaxed">
-                          <div className="text-[10px] font-bold text-gray-500 mb-1 text-right">{m.sender}</div>
+                {activeMessages.map((m, idx) => {
+                  const prev = activeMessages[idx - 1];
+                  const grouped = prev && prev.sender === m.sender && !!prev.is_note === !!m.is_note && prev.role === m.role;
+                  const time = formatTime(m.created_at);
+
+                  return (
+                    <div key={idx} className={grouped ? "space-y-1 -mt-2" : "space-y-1"}>
+                      {m.is_note ? (
+                        <div className="bg-[#fffbeb] border border-[#fde68a] p-3 rounded-lg text-[#92400e] text-xs max-w-[85%] mx-auto shadow-2xs">
+                          {!grouped && (
+                            <div className="font-bold text-[10px] text-[#b45309] mb-0.5 flex items-center gap-1">
+                              <i data-lucide="lock" className="w-3 h-3"></i> INTERNAL NOTE ({m.sender})
+                            </div>
+                          )}
                           <div>{m.text}</div>
+                          {time && <div className="text-[9px] text-[#b45309]/70 mt-1">{time}</div>}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 max-w-[85%] items-start">
-                        <div className={`w-6 h-6 rounded-full ${avatarColor(m.sender)} text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-1`}>
-                          {initials(m.sender)}
+                      ) : m.role === "assistant" ? (
+                        <div className="flex gap-2 max-w-[85%] items-start ml-auto flex-row-reverse">
+                          <div className={`w-6 h-6 shrink-0 mt-1 ${grouped ? "" : `rounded-full ${avatarColor(m.sender)} text-white font-bold flex items-center justify-center text-[10px]`}`}>
+                            {!grouped && initials(m.sender)}
+                          </div>
+                          <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-tr-none text-gray-900 shadow-2xs leading-relaxed">
+                            {!grouped && <div className="text-[10px] font-bold text-gray-500 mb-1 text-right">{m.sender}</div>}
+                            <div>{m.text}</div>
+                            {time && <div className="text-[9px] text-gray-400 mt-1 text-right">{time}</div>}
+                          </div>
                         </div>
-                        <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-tl-none text-gray-900 shadow-2xs leading-relaxed">
-                          <div className="text-[10px] font-bold text-gray-500 mb-1">{m.sender}</div>
-                          <div>{m.text}</div>
+                      ) : (
+                        <div className="flex gap-2 max-w-[85%] items-start">
+                          <div className={`w-6 h-6 shrink-0 mt-1 ${grouped ? "" : `rounded-full ${avatarColor(m.sender)} text-white font-bold flex items-center justify-center text-[10px]`}`}>
+                            {!grouped && initials(m.sender)}
+                          </div>
+                          <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-tl-none text-gray-900 shadow-2xs leading-relaxed">
+                            {!grouped && <div className="text-[10px] font-bold text-gray-500 mb-1">{m.sender}</div>}
+                            <div>{m.text}</div>
+                            {time && <div className="text-[9px] text-gray-400 mt-1">{time}</div>}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  );
+                })}
                 <div ref={chatEndRef} />
               </div>
 
