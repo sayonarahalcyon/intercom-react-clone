@@ -313,6 +313,29 @@
         return 'default';
       };
 
+      const [sparkCopied, setSparkCopied] = useState(false);
+
+      // Formats the current practice conversation as plain text so a trainee can paste it
+      // straight into the real Spark tool, same idea as pasting a real Intercom link, just
+      // with text instead of a URL since practice tickets don't live in real Intercom.
+      const copyForSpark = async () => {
+        const custName = currentActiveChat?.customerName || "Customer";
+        const lines = activeMessages.map(m => {
+          const label = m.is_note ? `[Internal note — ${m.sender}]` : `${m.sender}:`;
+          return `${label} ${m.text}`;
+        });
+        const transcript = `Practice conversation with ${custName} (ZEVO Car Sharing)\n\n${lines.join("\n")}\n\nBased on this conversation, what would you recommend I say next, and what should my internal note say?`;
+
+        try {
+          await navigator.clipboard.writeText(transcript);
+        } catch (e) {
+          // Clipboard API can be blocked in some contexts — fall back to a manual copy dialog.
+          window.prompt("Copy this and paste it into Spark:", transcript);
+        }
+        setSparkCopied(true);
+        setTimeout(() => setSparkCopied(false), 2000);
+      };
+
       const fakeEmail = (name) => {
         if (!name) return "unknown@example.com";
         const slug = name.trim().toLowerCase().replace(/[^a-z\s]/g, "").split(/\s+/).filter(Boolean).join(".");
@@ -479,6 +502,13 @@
                   <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Open
                   </span>
+                  <button
+                    onClick={copyForSpark}
+                    title="Copy this conversation to paste into Spark"
+                    className={`text-[10px] px-2 py-1 rounded font-semibold flex items-center gap-1 transition ${sparkCopied ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100"}`}>
+                    <i data-lucide={sparkCopied ? "check" : "copy"} className="w-3 h-3"></i>
+                    {sparkCopied ? "Copied!" : "Copy for Spark"}
+                  </button>
                   <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"><i data-lucide="flag" className="w-3.5 h-3.5"></i></button>
                   <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"><i data-lucide="more-horizontal" className="w-4 h-4"></i></button>
                 </div>
